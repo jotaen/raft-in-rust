@@ -28,6 +28,7 @@ enum Message {
 
 impl Node {
     fn receive(&mut self, m: Message) -> Message {
+        // TODO break up this gigantic match
         return match m {
             AppendLog { sender_id, term_id } => {
                 if sender_id == self.leader_id && term_id == self.term_id {
@@ -188,7 +189,6 @@ mod tests {
     #[test]
     fn test_always_votes_yes_for_leader_in_same_term() {
         let leader = default_message_builder();
-
         let mut follower = new_follower(15, leader.id, leader.term_id);
 
         let result = follower.receive(leader.request_vote());
@@ -201,6 +201,23 @@ mod tests {
         let candidate_a = message_builder(264785, leader.term_id);
 
         let mut follower = new_follower(15, leader.id, leader.term_id);
+
+        let result = follower.receive(candidate_a.request_vote());
+        assert_eq!(result, VoteNo { sender_id: follower.id });
+    }
+
+    #[test]
+    fn test_when_voting_newest_term_always_wins() {
+        let leader = default_message_builder();
+        let mut follower = new_follower(15, leader.id, leader.term_id);
+
+        let candidate_a = message_builder(987234, leader.term_id + 1);
+        let result = follower.receive(candidate_a.request_vote());
+        assert_eq!(result, VoteYes { sender_id: follower.id });
+
+        let candidate_b = message_builder(287634, candidate_a.term_id + 1);
+        let result = follower.receive(candidate_b.request_vote());
+        assert_eq!(result, VoteYes { sender_id: follower.id });
 
         let result = follower.receive(candidate_a.request_vote());
         assert_eq!(result, VoteNo { sender_id: follower.id });
