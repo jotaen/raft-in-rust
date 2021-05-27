@@ -1,29 +1,15 @@
-use crate::Message::{Acknowledge, Reject, AppendLog, RequestLog, RequestVote, VoteNo, VoteYes};
+mod message;
+use crate::message::{Message, Message::*, NodeId, TermId};
 
 fn main() {
     println!("Hello, world!");
 }
-
-type NodeId = u32;
-type TermId = u64;
 
 struct Node {
     id: NodeId,
     leader_id: NodeId,
     term_id: TermId,
     vote_for_future_term: Option<(TermId, NodeId)>,
-}
-
-#[derive(PartialEq)]
-#[derive(Debug)]
-enum Message {
-    AppendLog { sender_id: NodeId, term_id: TermId },
-    Acknowledge { sender_id: NodeId },
-    Reject,
-    RequestLog { sender_id: NodeId },
-    RequestVote { sender_id: NodeId, proposed_term_id: TermId },
-    VoteNo {sender_id: NodeId },
-    VoteYes {sender_id: NodeId }
 }
 
 impl Node {
@@ -81,7 +67,6 @@ fn new_follower(id: NodeId, leader_id: NodeId, term_id: TermId) -> Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Message::{AppendLog, Reject, RequestLog, VoteNo, RequestVote, VoteYes};
 
     struct MessageBuilder {
         id: NodeId,
