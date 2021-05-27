@@ -69,6 +69,7 @@ mod tests {
         term_id: TermId,
     }
 
+    #[deprecated]
     impl MessageBuilder {
         fn append_log(&self) -> Message {
             AppendLog { sender_id: self.id, term_id: self.term_id, receiver_id: 981273461, commands: vec![] } // TODO receiver_id, commands
@@ -78,6 +79,7 @@ mod tests {
         }
     }
 
+    #[deprecated]
     fn default_message_builder() -> MessageBuilder {
         return MessageBuilder { id: 827349, term_id: 7812635 };
     }
