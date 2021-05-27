@@ -69,7 +69,7 @@ mod tests {
         term_id: TermId,
     }
 
-    #[deprecated]
+    #[deprecated] // TODO Use real leader / followers in tests
     impl MessageBuilder {
         fn append_log(&self) -> Message {
             AppendLog { sender_id: self.id, term_id: self.term_id, receiver_id: 981273461, commands: vec![] } // TODO receiver_id, commands
