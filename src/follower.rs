@@ -12,7 +12,7 @@ impl Follower {
         // TODO break up this gigantic match
         // TODO check that the message is for us (`receiver_id`)
         return match m {
-            AppendLog { sender_id, term_id, receiver_id } => {
+            AppendLog { sender_id, term_id, receiver_id, commands } => {
                 if sender_id == self.leader_id && term_id == self.term_id {
                     Acknowledge { sender_id: self.id }
                 } else if term_id > self.term_id {
@@ -71,7 +71,7 @@ mod tests {
 
     impl MessageBuilder {
         fn append_log(&self) -> Message {
-            AppendLog { sender_id: self.id, term_id: self.term_id, receiver_id: 981273461 } // TODO
+            AppendLog { sender_id: self.id, term_id: self.term_id, receiver_id: 981273461, commands: vec![] } // TODO receiver_id, commands
         }
         fn request_vote(&self) -> Message {
             RequestVote { sender_id: self.id, proposed_term_id: self.term_id }

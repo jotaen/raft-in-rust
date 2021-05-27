@@ -1,4 +1,4 @@
-use crate::message::{Message, Message::*, NodeId, TermId};
+use crate::message::{Message, Message::*, NodeId, TermId, Command};
 
 trait Outbox {
     fn deliver_message(&mut self, m: Message);
@@ -20,10 +20,11 @@ struct Leader<'a> {
     outbox: &'a mut dyn Outbox,
     followers: Vec<NodeId>,
     expected_acks: Vec<NodeId>,
+    commands: Vec<Command>,
 }
 
 fn new_leader(id: NodeId, term_id: TermId, outbox: &mut dyn Outbox, followers: Vec<NodeId>) -> Leader {
-    return Leader { id, term_id, outbox, followers, expected_acks: vec![] };
+    return Leader { id, term_id, outbox, followers, expected_acks: vec![], commands: vec![] };
 }
 
 impl Leader<'_> {
@@ -37,15 +38,19 @@ impl Leader<'_> {
         }
     }
 
+    fn append(&mut self) {
+        self.commands.push(vec![]);
+    }
+
     fn trigger_retries(&mut self) {
         for e in self.expected_acks.as_slice() {
-            self.outbox.deliver_message(Message::AppendLog { term_id: self.term_id, sender_id: self.id, receiver_id: *e });
+            self.outbox.deliver_message(Message::AppendLog { term_id: self.term_id, sender_id: self.id, receiver_id: *e, commands: vec![] });
         }
     }
 
     fn trigger_heartbeat(&mut self) {
         for f in self.followers.as_slice() {
-            self.outbox.deliver_message(Message::AppendLog { term_id: self.term_id, sender_id: self.id, receiver_id: *f });
+            self.outbox.deliver_message(Message::AppendLog { term_id: self.term_id, sender_id: self.id, receiver_id: *f, commands: self.commands.clone() });
             self.expected_acks.push(*f);
         }
     }
@@ -64,8 +69,8 @@ mod tests {
         let mut leader = new_leader(LEADER_ID, TERM_ID, &mut o, vec![3672, 951287]);
         leader.trigger_heartbeat();
         assert_eq!(o.buffer, vec![
-            AppendLog { term_id: TERM_ID, sender_id: LEADER_ID, receiver_id: 3672 },
-            AppendLog { term_id: TERM_ID, sender_id: LEADER_ID, receiver_id: 951287 },
+            AppendLog { term_id: TERM_ID, sender_id: LEADER_ID, receiver_id: 3672, commands: vec![] },
+            AppendLog { term_id: TERM_ID, sender_id: LEADER_ID, receiver_id: 951287, commands: vec![] },
         ]);
     }
 
@@ -80,7 +85,7 @@ mod tests {
         leader.outbox = &mut o2;
         leader.trigger_retries();
         assert_eq!(o2.buffer, vec![
-            AppendLog { term_id: TERM_ID, sender_id: LEADER_ID, receiver_id: 3672 },
+            AppendLog { term_id: TERM_ID, sender_id: LEADER_ID, receiver_id: 3672, commands: vec![] },
         ]);
     }
 
@@ -90,5 +95,19 @@ mod tests {
         let mut leader = new_leader(LEADER_ID, TERM_ID, &mut o, vec![3672, 951287]);
         leader.trigger_heartbeat();
         leader.receive(Acknowledge { sender_id: 8796324 });
+    }
+
+    #[test]
+    fn test_sends_all_buffered_commands_when_broadcasting() {
+        let mut o = MockOutbox { buffer: vec![] };
+        let mut leader = new_leader(LEADER_ID, TERM_ID, &mut o, vec![3672, 951287]);
+        leader.append();
+        leader.append();
+        leader.append();
+        leader.trigger_heartbeat();
+        assert_eq!(o.buffer, vec![
+            AppendLog { term_id: TERM_ID, sender_id: LEADER_ID, receiver_id: 3672, commands: vec![vec![]; 3] },
+            AppendLog { term_id: TERM_ID, sender_id: LEADER_ID, receiver_id: 951287, commands: vec![vec![]; 3] },
+        ]);
     }
 }
