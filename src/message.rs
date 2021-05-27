@@ -11,4 +11,5 @@ pub enum Message {
     RequestVote { sender_id: NodeId, proposed_term_id: TermId },
     VoteNo { sender_id: NodeId },
     VoteYes { sender_id: NodeId },
+    Heartbeat,
 }
