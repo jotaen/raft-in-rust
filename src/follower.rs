@@ -10,8 +10,9 @@ struct Follower {
 impl Follower {
     fn receive(&mut self, m: Message) -> Message {
         // TODO break up this gigantic match
+        // TODO check that the message is for us (`receiver_id`)
         return match m {
-            AppendLog { sender_id, term_id } => {
+            AppendLog { sender_id, term_id, receiver_id } => {
                 if sender_id == self.leader_id && term_id == self.term_id {
                     Acknowledge { sender_id: self.id }
                 } else if term_id > self.term_id {
@@ -70,7 +71,7 @@ mod tests {
 
     impl MessageBuilder {
         fn append_log(&self) -> Message {
-            AppendLog { sender_id: self.id, term_id: self.term_id }
+            AppendLog { sender_id: self.id, term_id: self.term_id, receiver_id: 981273461 } // TODO
         }
         fn request_vote(&self) -> Message {
             RequestVote { sender_id: self.id, proposed_term_id: self.term_id }
@@ -95,7 +96,7 @@ mod tests {
         assert_eq!(result, Acknowledge { sender_id: follower.id });
 
         let mut other_follower = new_follower(16, leader.id, leader.term_id);
-        let result = other_follower.receive(AppendLog { sender_id: leader.id, term_id: leader.term_id });
+        let result = other_follower.receive(leader.append_log());
         assert_eq!(result, Acknowledge { sender_id: other_follower.id });
     }
 
@@ -114,7 +115,7 @@ mod tests {
         let leader = default_message_builder();
         let leader_in_old_term = message_builder(leader.id, leader.term_id - 1);
         let mut follower = new_follower(15, leader.id, leader.term_id);
-        let result = follower.receive(AppendLog { sender_id: leader.id, term_id: leader_in_old_term.term_id });
+        let result = follower.receive(leader_in_old_term.append_log());
         assert_eq!(result, Reject)
     }
 

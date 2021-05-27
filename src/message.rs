@@ -4,7 +4,7 @@ pub type TermId = u64;
 #[derive(PartialEq)]
 #[derive(Debug)]
 pub enum Message {
-    AppendLog { sender_id: NodeId, term_id: TermId },
+    AppendLog { sender_id: NodeId, term_id: TermId, receiver_id: NodeId },
     Acknowledge { sender_id: NodeId },
     Reject,
     RequestLog { sender_id: NodeId },
